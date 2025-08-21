@@ -7,8 +7,6 @@ from networksecurity.logging.logger import logging
 from networksecurity.entity.artifact_entity import DataTransformationArtifact,ModelTrainerArtifact
 from networksecurity.entity.config_entity import ModelTrainerConfig
 
-
-
 from networksecurity.utils.ml_utils.model.estimator import NetworkModel
 from networksecurity.utils.main_utils.utils import save_object,load_object
 from networksecurity.utils.main_utils.utils import load_numpy_array_data,evaluate_models
@@ -26,6 +24,8 @@ from sklearn.ensemble import (
 import mlflow
 from urllib.parse import urlparse
 
+import dagshub
+dagshub.init(repo_owner='gagannarang18', repo_name='PhishNet-Fraudulent-Website-Detection', mlflow=True)
 
 
 class ModelTrainer:
@@ -37,20 +37,21 @@ class ModelTrainer:
             raise NetworkSecurityException(e,sys)
         
     def track_mlflow(self,best_model,classificationmetric):
-    
-        with mlflow.start_run():
-            f1_score=classificationmetric.f1_score
-            precision_score=classificationmetric.precision_score
-            recall_score=classificationmetric.recall_score
+        try:
+            with mlflow.start_run():
+                f1_score=classificationmetric.f1_score
+                precision_score=classificationmetric.precision_score
+                recall_score=classificationmetric.recall_score
 
-            
+                mlflow.log_metric("f1_score",f1_score)
+                mlflow.log_metric("precision",precision_score)
+                mlflow.log_metric("recall_score",recall_score)
 
-            mlflow.log_metric("f1_score",f1_score)
-            mlflow.log_metric("precision",precision_score)
-            mlflow.log_metric("recall_score",recall_score)
-            mlflow.sklearn.log_model(best_model,"model")
+                # ✅ FIX: use artifact_path instead of deprecated/unsupported default
+                mlflow.sklearn.log_model(sk_model=best_model, artifact_path="model")
 
-
+        except Exception as e:
+            raise NetworkSecurityException(e,sys)
         
     def train_model(self,X_train,y_train,x_test,y_test):
         models = {
@@ -63,21 +64,13 @@ class ModelTrainer:
         params={
             "Decision Tree": {
                 'criterion':['gini', 'entropy', 'log_loss'],
-                # 'splitter':['best','random'],
-                # 'max_features':['sqrt','log2'],
             },
             "Random Forest":{
-                # 'criterion':['gini', 'entropy', 'log_loss'],
-                
-                # 'max_features':['sqrt','log2',None],
                 'n_estimators': [8,16,32,128,256]
             },
             "Gradient Boosting":{
-                # 'loss':['log_loss', 'exponential'],
                 'learning_rate':[.1,.01,.05,.001],
                 'subsample':[0.6,0.7,0.75,0.85,0.9],
-                # 'criterion':['squared_error', 'friedman_mse'],
-                # 'max_features':['auto','sqrt','log2'],
                 'n_estimators': [8,16,32,64,128,256]
             },
             "Logistic Regression":{},
@@ -85,16 +78,11 @@ class ModelTrainer:
                 'learning_rate':[.1,.01,.001],
                 'n_estimators': [8,16,32,64,128,256]
             }
-            
         }
         model_report:dict=evaluate_models(X_train=X_train,y_train=y_train,X_test=x_test,y_test=y_test,
                                           models=models,param=params)
         
-        ## To get best model score from dict
         best_model_score = max(sorted(model_report.values()))
-
-        ## To get best model name from dict
-
         best_model_name = list(model_report.keys())[
             list(model_report.values()).index(best_model_score)
         ]
@@ -103,9 +91,8 @@ class ModelTrainer:
 
         classification_train_metric=get_classification_score(y_true=y_train,y_pred=y_train_pred)
         
-        ## Track the experiements with mlflow
+        ## Track experiments with mlflow
         self.track_mlflow(best_model,classification_train_metric)
-
 
         y_test_pred=best_model.predict(x_test)
         classification_test_metric=get_classification_score(y_true=y_test,y_pred=y_test_pred)
@@ -119,11 +106,8 @@ class ModelTrainer:
 
         Network_Model=NetworkModel(preprocessor=preprocessor,model=best_model)
         save_object(self.model_trainer_config.trained_model_file_path,obj=NetworkModel)
-        #model pusher
         save_object("final_model/model.pkl",best_model)
         
-
-        ## Model Trainer Artifact
         model_trainer_artifact=ModelTrainerArtifact(trained_model_file_path=self.model_trainer_config.trained_model_file_path,
                              train_metric_artifact=classification_train_metric,
                              test_metric_artifact=classification_test_metric
@@ -131,15 +115,11 @@ class ModelTrainer:
         logging.info(f"Model trainer artifact: {model_trainer_artifact}")
         return model_trainer_artifact
 
-    
-    
-        
     def initiate_model_trainer(self)->ModelTrainerArtifact:
         try:
             train_file_path = self.data_transformation_artifact.transformed_train_file_path
             test_file_path = self.data_transformation_artifact.transformed_test_file_path
 
-            #loading training array and testing array
             train_arr = load_numpy_array_data(train_file_path)
             test_arr = load_numpy_array_data(test_file_path)
 
@@ -153,6 +133,5 @@ class ModelTrainer:
             model_trainer_artifact=self.train_model(x_train,y_train,x_test,y_test)
             return model_trainer_artifact
 
-            
         except Exception as e:
             raise NetworkSecurityException(e,sys)

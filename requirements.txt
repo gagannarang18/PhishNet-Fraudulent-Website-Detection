@@ -4,7 +4,7 @@ numpy
 certifi
 pymongo[srv]==3.6
 scikit-learn
-mlflow
+mlflow==2.12.1
 pyaml
 dagshub
 fastapi
