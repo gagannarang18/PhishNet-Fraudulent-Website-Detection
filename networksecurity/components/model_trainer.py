@@ -24,8 +24,15 @@ from sklearn.ensemble import (
 import mlflow
 from urllib.parse import urlparse
 
-import dagshub
-dagshub.init(repo_owner='gagannarang18', repo_name='PhishNet-Fraudulent-Website-Detection', mlflow=True)
+import os
+import dagshub 
+dagshub_token = os.getenv('DAGSHUB_TOKEN')
+if dagshub_token:
+    dagshub.auth.add_app_token(token=dagshub_token)
+    dagshub.init(repo_owner='gagannarang18', repo_name='PhishNet-Fraudulent-Website-Detection', mlflow=True)
+else:
+    print("Warning: DAGSHUB_TOKEN not found. Skipping DagsHub initialization.")
+
 
 
 class ModelTrainer:
