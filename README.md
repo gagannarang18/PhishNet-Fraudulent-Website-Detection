@@ -44,7 +44,7 @@ We used **MLflow with DagsHub integration** for tracking metrics, parameters, an
 
 ## 🏗️ Project Architecture  
 
-```mermaid
+
 flowchart TD
     A[Data Ingestion] --> B[Data Validation]
     B --> C[Data Transformation]
