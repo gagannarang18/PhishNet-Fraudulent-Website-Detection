@@ -4,7 +4,7 @@
 PhishNet is an **end-to-end MLOps pipeline** for detecting fraudulent websites with high accuracy.  
 It automates **data ingestion, validation, transformation, model training, experiment tracking, and deployment** into a real-time API.  
 
-- ✅ **99.2% validation accuracy** and **0.97 F1-score**  
+- ✅ **97% validation accuracy** and **0.97 F1-score on validation data** 
 - ✅ Full **MLflow + DagsHub** integration for experiment tracking and model versioning  
 - ✅ Models and artifacts automatically synced to **AWS S3** for reproducibility  
 - ✅ Deployed as a containerized **FastAPI service** on **AWS EC2/ECR**  
