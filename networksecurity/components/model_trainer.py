@@ -49,10 +49,14 @@ class ModelTrainer:
                 f1_score=classificationmetric.f1_score
                 precision_score=classificationmetric.precision_score
                 recall_score=classificationmetric.recall_score
+                accuracy_score = classificationmetric.accuracy_score 
 
                 mlflow.log_metric("f1_score",f1_score)
                 mlflow.log_metric("precision",precision_score)
                 mlflow.log_metric("recall_score",recall_score)
+                mlflow.log_metric("accuracy", accuracy_score)
+                
+                
 
                 # ✅ FIX: use artifact_path instead of deprecated/unsupported default
                 mlflow.sklearn.log_model(sk_model=best_model, artifact_path="model")
